@@ -11,7 +11,7 @@
 		}
 	},
 	"require" : {
-		"tokushima/ebi" : "2.1.9"
+		"tokushima/ebi" : ">=2.1.9"
 	},
 	"after" : {
 		"dummy": [
