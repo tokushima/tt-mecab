@@ -1,0 +1,21 @@
+{
+	"name" : "tokushima/tt-mecab",
+	"type" : "library",
+	"license" : "MIT",
+	"authors" : [{
+		"name" : "tokushima"
+	}],
+	"autoload" : {
+		"psr-4" : {
+			"tt\\" : "lib/tt/"
+		}
+	},
+	"require" : {
+		"tokushima/ebi" : "2.1.9"
+	},
+	"after" : {
+		"dummy": [
+			"\\MeCab\\Tagger"
+		]
+	}
+}

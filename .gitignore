@@ -1,0 +1,6 @@
+/vendor/
+/cmdman.phar
+/composer.lock
+/composer.phar
+/commons/
+/work/
