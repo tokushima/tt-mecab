@@ -9,3 +9,7 @@
 /.project
 
 
+/__settings__.php
+/bootstrap.php
+/TEXT.txt
+/test.php

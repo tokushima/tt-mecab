@@ -7,24 +7,18 @@ namespace tt;
  *  > brew install mecab
  *  > brew install mecab-ipadic
  *  
- * ユーザ辞書
- *  wikipedia: http://dumps.wikimedia.org/jawiki/latest/jawiki-latest-all-titles-in-ns0.gz
- *
- * 辞書作成
- *  > /usr/local/Cellar/mecab/0.996/libexec/mecab/mecab-dict-index -d /usr/local/lib/mecab/dic/ipadic -u ./wikipedia.dic -f utf-8 -t utf-8 ./wikipedia.csv
- *
- * 辞書追加
- *  > vim /usr/local/lib/mecab/dic/ipadic/dicrc
- *  追記: userdic = /usr/local/lib/mecab/dic/ipadic/wikipedia.dic
- *
  * Neologism dictionary for MeCab
  *  (mecab-ipadic-NEologd は、多数のWeb上の言語資源から得た新語を追加することでカスタマイズした MeCab 用のシステム辞書です。)
  *  https://github.com/neologd/mecab-ipadic-neologd/blob/master/README.ja.md
  *
- * 辞書DIRの変更
+ * 辞書を設定
  *  > vim /usr/local/etc/mecabrc
- *  変更: dicdir = /usr/local/lib/mecab/dic/mecab-ipadic-neologd
- *
+ *  
+ * 辞書DIRの変更: 
+ *  dicdir = /usr/local/lib/mecab/dic/mecab-ipadic-neologd
+ * ユーザ辞書追加(カンマ区切りで複数指定可能): 
+ *  userdic = /usr/local/lib/mecab/dic/ipadic/wikipedia.dic
+ * 
  * @author tokushima
  * @see https://github.com/rsky/php-mecab
  */
@@ -257,7 +251,7 @@ class MeCab{
 	 * 辞書変換用の構成にする
 	 * @return string
 	 */
-	private static function csv_values($value,$reading=null,$pos='名詞',$opt1='固有名詞',$opt2='一般',$origin=null){
+	public static function csv_values($value,$reading=null,$pos='名詞',$opt1='固有名詞',$opt2='一般',$origin=null){
 		if(empty($opt1)){
 			$opt1 = '*';
 		}
@@ -268,29 +262,5 @@ class MeCab{
 			$origin = '*';
 		}
 		return [$value,null,null,1,$pos,$opt1,$opt2,'*','*','*',$value,$reading,$reading,$origin];
-	}
-
-	/**
-	 * Wikipediaのタイトル一覧からdic用csvへ変換
-	 * @param string $wikipedia_csv_file
-	 * @param string $dic_csv_file
-	 * @see http://dumps.wikimedia.org/jawiki/latest/jawiki-latest-all-titles-in-ns0.gz
-	 *
-	 * dic_csv_file => .dic
-	 *  /usr/local/Cellar/mecab/0.996/libexec/mecab/mecab-dict-index -d /usr/local/lib/mecab/dic/ipadic/ -u ./jawiki.dic -f utf-8 -t utf-8 ./jawiki.csv
-	 */
-	public static function wikipedia_csv_to_dic_csv($wikipedia_csv_file,$dic_csv_file){
-		$file = new \SplFileObject($dic_csv_file,'w');
-		$i = 0;
-
-		foreach(\ebi\Util::file_read_csv($wikipedia_csv_file) as $csv){
-			if($i++ > 0){
-				$value = trim($csv[0]);
-
-				if(!empty($value) && !ctype_digit($value)){
-					$file->fputcsv(self::csv_values($value,null,'名詞','固有名詞','一般','wikipedia'));
-				}
-			}
-		}
 	}
 }
