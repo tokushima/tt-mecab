@@ -246,21 +246,4 @@ class MeCab{
 		}
 		return array_unique($result);
 	}
-
-	/**
-	 * 辞書変換用の構成にする
-	 * @return string
-	 */
-	public static function csv_values($value,$reading=null,$pos='名詞',$opt1='固有名詞',$opt2='一般',$origin=null){
-		if(empty($opt1)){
-			$opt1 = '*';
-		}
-		if(empty($opt2)){
-			$opt2 = '*';
-		}
-		if(empty($origin)){
-			$origin = '*';
-		}
-		return [$value,null,null,1,$pos,$opt1,$opt2,'*','*','*',$value,$reading,$reading,$origin];
-	}
 }
