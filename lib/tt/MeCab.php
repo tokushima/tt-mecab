@@ -141,32 +141,26 @@ class MeCab{
 		$mecab_cmd = \ebi\Conf::get('cmd');
 		
 		if(!empty($mecab_cmd)){
-			foreach(explode(PHP_EOL,$text) as $line){
-				$line = trim($line);
-				
-				if(!empty($line)){
-					$command = new \ebi\Command('echo "'.escapeshellcmd($line).'" | '.$mecab_cmd.' -p');
-					
-					foreach(explode(PHP_EOL,$command->stdout()) as $rtn){
-						if($rtn == 'EOS' || empty($rtn)){
-							break;
-						}
-						list($surface,$feature) = explode("\t",$rtn);
-						$fe = explode(',',$feature);
-						$pos = self::feature2pos($fe[0]);
-						
-						if(!empty($filter) && !in_array($pos,$filter)){
-							continue;
-						}
-						yield new static(
-							$surface,
-							$pos,
-							($fe[8] ?? $surface),
-							$fe[1],
-							(($fe[2] == '*') ? '' :  $fe[2])
-						);
-					}
+			$command = new \ebi\Command('echo "'.escapeshellcmd($text).'" | '.$mecab_cmd.' -p');
+			
+			foreach(explode(PHP_EOL,$command->stdout()) as $rtn){
+				if($rtn == 'EOS' || empty($rtn)){
+					break;
 				}
+				list($surface,$feature) = explode("\t",$rtn);
+				$fe = explode(',',$feature);
+				$pos = self::feature2pos($fe[0]);
+				
+				if(!empty($filter) && !in_array($pos,$filter)){
+					continue;
+				}
+				yield new static(
+					$surface,
+					$pos,
+					($fe[8] ?? $surface),
+					$fe[1],
+					(($fe[2] == '*') ? '' :  $fe[2])
+				);
 			}
 		}else if(class_exists('\MeCab\Tagger')){
 			foreach((new \MeCab\Tagger())->parseToNode($text) as $node){
