@@ -13,6 +13,7 @@
  *
  * @param string $in 辞書の元になるCSV/TEXTファイル @['require'=>true]
  * @param string $out 正規化されたCSVファイル @['require'=>true]
+ * @param boolean $verb 品詞が未定義の場合に動詞とする
  * @see http://www.unixuser.org/~euske/doc/postag/#chasen
  * @see http://dumps.wikimedia.org/jawiki/latest/jawiki-latest-all-titles-in-ns0.gz
  */
@@ -23,22 +24,24 @@ if(!is_file($in)){
 \ebi\Util::mkdir(dirname($out));
 $outfile = new \SplFileObject($out,'w');
 $iscsv = preg_match('/\.csv$/i', $in);
+$isverb = (boolean)$verb;
 
-$func_putcsv = function($value,$data) use($outfile){
+$func_putcsv = function($value,$data) use($outfile,$isverb){
 	$value = trim($value);
 	
 	if(!empty($value) && !ctype_digit($value)){
 		$reading = $data[1] ?? null; // 読み
-		$pos = $data[2] ?? '名詞'; // 品詞
-		$opt1 = $data[3] ?? (($pos == '名詞') ? '固有名詞' : '*'); // 品詞細分類1
+		$pos = $data[2] ?? ($isverb ? '動詞' : '名詞'); // 品詞
+		$opt1 = $data[3] ?? (($pos == '名詞') ? '固有名詞' : (($pos == '動詞') ? '*' : '*')); // 品詞細分類1
 		$opt2 = $data[4] ?? (($opt1 == '固有名詞') ? '一般' : '*'); // 品詞細分類2
 		$opt3 = $data[5] ?? '*'; // 品詞細分類3
 		$cost = $data[6] ?? 1; // コスト
+		$id = ($isverb ? 1 : null);
 		
 		$outfile->fputcsv([
 			$value, // 表層形
-			null, // 左文脈ID
-			null, // 右文脈ID
+			$id, // 左文脈ID
+			$id, // 右文脈ID
 			$cost, // コスト
 			$pos, // 品詞
 			$opt1, // 品詞細分類1
