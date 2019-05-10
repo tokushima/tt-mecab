@@ -136,6 +136,8 @@ class MeCab{
 	public static function morpheme($text,$filter=[]){
 		/**
 		 * mecabコマンドパス
+		 * /usr/local/bin/mecab 
+		 * /usr/local/bin/mecab -u /etc/opt/user.dic
 		 * @var string $cmd
 		 */
 		$mecab_cmd = \ebi\Conf::get('cmd');
