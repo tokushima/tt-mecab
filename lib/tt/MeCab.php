@@ -145,79 +145,80 @@ class MeCab{
 		 * @var string $cmd
 		 */
 		$mecab_cmd = \ebi\Conf::get('cmd');
+		$text = trim($text);
 		
-		if(!empty($mecab_cmd)){
-			$command = new \ebi\Command('echo "'.escapeshellcmd($text).'" | '.$mecab_cmd.' -p');
-			
-			foreach(explode(PHP_EOL,$command->stdout()) as $rtn){
-				if($rtn == 'EOS' || empty($rtn)){
-					break;
-				}
-				list($surface,$feature) = explode("\t",$rtn);
-				$fe = explode(',',$feature);
+		if(!empty($text)){
+			if(!empty($mecab_cmd)){
+				$command = new \ebi\Command('echo "'.escapeshellcmd($text).'" | '.$mecab_cmd.' -p');
 				
-				if(sizeof($fe) > 2){
-					$pos = self::feature2pos($fe[0]);
-					
-					if(!empty($filter) && !in_array($pos,$filter)){
-						continue;
+				foreach(explode(PHP_EOL,$command->stdout()) as $rtn){
+					if($rtn == 'EOS' || empty($rtn)){
+						break;
 					}
-					yield new static(
-						$surface,
-						$pos,
-						($fe[8] ?? $surface),
-						$fe[1],
-						(($fe[2] == '*') ? '' :  $fe[2])
-					);
-				}
-			}
-		}else if(class_exists('\MeCab\Tagger')){
-			foreach((new \MeCab\Tagger())->parseToNode($text) as $node){
-				if($node->getPosId() > 0){
-					$fe = explode(',',$node->getFeature());
-					$pos = self::feature2pos($fe[0]);
+					list($surface,$feature) = explode("\t",$rtn);
+					$fe = explode(',',$feature);
 					
-					if(!empty($filter) && !in_array($pos,$filter)){
-						continue;
+					if(sizeof($fe) > 2){
+						$pos = self::feature2pos($fe[0]);
+						
+						if(!empty($filter) && !in_array($pos,$filter)){
+							continue;
+						}
+						yield new static(
+							$surface,
+							$pos,
+							($fe[8] ?? $surface),
+							$fe[1],
+							(($fe[2] == '*') ? '' :  $fe[2])
+						);
 					}
-					yield new static(
-						$node->getSurface(),
-						$pos,
-						($fe[8] ?? $node->getSurface()),
-						$fe[1],
-						(($fe[2] == '*') ? '' :  $fe[2])
-					);
 				}
+			}else if(class_exists('\MeCab\Tagger')){
+				foreach((new \MeCab\Tagger())->parseToNode($text) as $node){
+					if($node->getPosId() > 0){
+						$fe = explode(',',$node->getFeature());
+						$pos = self::feature2pos($fe[0]);
+						
+						if(!empty($filter) && !in_array($pos,$filter)){
+							continue;
+						}
+						yield new static(
+							$node->getSurface(),
+							$pos,
+							($fe[8] ?? $node->getSurface()),
+							$fe[1],
+							(($fe[2] == '*') ? '' :  $fe[2])
+						);
+					}
+				}
+			}else{
+				throw new \ebi\exception\BadMethodCallException('mecab not found');
 			}
-		}else{
-			throw new \ebi\exception\BadMethodCallException('mecab not found');
 		}
 	}
 
 	/**
 	 * フレーズの抽出
-	 * @param \tt\MeCab[] $mecab_list
+	 * @param string $text
 	 * @return array \tt\MeCab[][]
 	 */
-	public static function phrases($mecab_list){
+	public static function phrases($text){
 		$phrases = [];
 		$sentence = [];
 		$prepos = null;
 		
-		foreach($mecab_list as $obj){
+		foreach(self::morpheme($text) as $obj){
 			if(
-				!empty($sentence) && (
+				!empty($sentence) && 
+				(
 					in_array($obj->pos(),[1,3,6,9,10]) ||
 					($obj->pos() == 13 && ($obj->prop1() == '読点' || $obj->prop1() == '句点'))
 				) &&
-				!preg_match('/^(?:\xE3\x81[\x81-\xBF]|\xE3\x82[\x80-\x93]|ー)$/',$obj->word()) && // ひらがな一文字は無視
-				!($prepos == 9 && $obj->pos() == 9) && 
-				!($prepos == 10 && $obj->pos() == 10) 
+				$prepos != $obj->pos()
 			){
 				$phrases[] = $sentence;
 				$sentence = [];
 			}
-			
 			$sentence[] = $obj;
 			$prepos = ($obj->word() == '・') ? 9 : $obj->pos();
 		}
