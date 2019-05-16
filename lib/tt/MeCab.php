@@ -207,7 +207,7 @@ class MeCab{
 		foreach($mecab_list as $obj){
 			if(
 				!empty($sentence) &&
-				($obj->pos() == 3 || $obj->pos() == 9 || $obj->pos() == 10  || $obj->pos() == 6 || 
+				($obj->pos() == 1 || $obj->pos() == 3 || $obj->pos() == 6 || $obj->pos() == 9  || $obj->pos() == 10 || 
 					($obj->pos() == 13 && ($obj->prop1() == '読点' || $obj->prop1() == '句点'))
 				) &&
 				!preg_match('/^(?:\xE3\x81[\x81-\xBF]|\xE3\x82[\x80-\x93]|ー)$/',$obj->word()) && // ひらがな一文字は無視
