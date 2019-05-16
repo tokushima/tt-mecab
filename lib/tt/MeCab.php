@@ -73,7 +73,11 @@ class MeCab{
 	}
 
 	public function pos_label(){
-		switch($this->pos){
+		return self::get_pos_label($this->pos);
+	}
+	
+	public static function get_pos_label($pos){
+		switch($pos){
 			case 1 : return '形容詞';
 			case 2 : return '形容動詞';
 			case 3 : return '感動詞';
@@ -151,18 +155,21 @@ class MeCab{
 				}
 				list($surface,$feature) = explode("\t",$rtn);
 				$fe = explode(',',$feature);
-				$pos = self::feature2pos($fe[0]);
 				
-				if(!empty($filter) && !in_array($pos,$filter)){
-					continue;
+				if(sizeof($fe) > 2){
+					$pos = self::feature2pos($fe[0]);
+					
+					if(!empty($filter) && !in_array($pos,$filter)){
+						continue;
+					}
+					yield new static(
+						$surface,
+						$pos,
+						($fe[8] ?? $surface),
+						$fe[1],
+						(($fe[2] == '*') ? '' :  $fe[2])
+					);
 				}
-				yield new static(
-					$surface,
-					$pos,
-					($fe[8] ?? $surface),
-					$fe[1],
-					(($fe[2] == '*') ? '' :  $fe[2])
-				);
 			}
 		}else if(class_exists('\MeCab\Tagger')){
 			foreach((new \MeCab\Tagger())->parseToNode($text) as $node){
@@ -188,64 +195,54 @@ class MeCab{
 	}
 
 	/**
-	 * キーフレーズ
-	 * @param string $text
-	 * @return string[]
+	 * フレーズの抽出
+	 * @param \tt\MeCab[] $mecab_list
+	 * @return array \tt\MeCab[][]
 	 */
-	public static function keyphrase($text,$filter=[9,10]){
-		$result = [];
-		$wordM = $wordD = '';
-		$isd = in_array(10,$filter);
-		$ism = in_array(9,$filter);
-
-		$valid_func = function($text){
-			$text = trim($text);
-			if(!empty($text) && (mb_strlen($text) > 1 || preg_match('/[^ぁ-んァ-ヴーa-zA-Z0-9]/u',$text))){
-				return true;
+	public static function phrases($mecab_list){
+		$phrases = [];
+		$sentence = [];
+		$prepos = null;
+		
+		foreach($mecab_list as $obj){
+			if(
+				!empty($sentence) &&
+				($obj->pos() == 3 || $obj->pos() == 9 || $obj->pos() == 10  || $obj->pos() == 6 || 
+					($obj->pos() == 13 && ($obj->prop1() == '読点' || $obj->prop1() == '句点'))
+				) &&
+				!preg_match('/^(?:\xE3\x81[\x81-\xBF]|\xE3\x82[\x80-\x93]|ー)$/',$obj->word()) && // ひらがな一文字は無視
+				!($prepos == 9 && ($obj->pos() == 9 || $obj->pos() == 10)) && 
+				!($prepos == 10 && $obj->pos() == 10) 
+			){
+				$phrases[] = $sentence;
+				$sentence = [];
 			}
-			return false;
-		};
-
-		foreach(self::morpheme($text) as $m){
-			if($m->pos() != 9){
-				if($isd){
-					if($m->pos() == 10){
-						$wordD = $m->word();
-					}else if($m->pos() == 12){
-						$wordD = $wordD.$m->word();
-					}else{
-						if($valid_func($wordD)){
-							$result[] = $wordD;
-						}
-						$wordD = '';
-					}
-				}
-				if($valid_func($wordM)){
-					$result[] = $wordM;
-				}
-				$wordM = '';
-			}else if($m->pos() == 9){
-				if($valid_func($wordD)){
-					$result[] = $wordD;
-				}
-				if($ism){
-					if($m->prop1() == '固有名詞'){
-						$result[] = $m->word();
-					}else if(ctype_alnum($m->word())){
-						$result[] = $m->word();
-					}else{
-						$wordM = $wordM.$m->word();
-					}
-				}
-				$wordD = '';
+			
+			if($obj->pos() != 13 || $obj->word() == '・'){
+				$sentence[] = $obj;
+				$prepos = ($obj->word() == '・') ? 9 : $obj->pos();
 			}
 		}
-		if($valid_func($wordM)){
-			$result[] = $wordM;
+		if(!empty($sentence)){
+			$phrases[] = $sentence;
 		}
-		if($valid_func($wordD)){
-			$result[] = $wordD;
+		return $phrases;
+	}
+	
+	/**
+	 * 結合する
+	 * @param \tt\MeCab[] $mecab_list
+	 * @param \tt\MeCab
+	 */
+	public static function join($mecab_list){
+		list($first) = $mecab_list;
+		$word = '';
+		
+		foreach($mecab_list as $mecab){
+			$word .= $mecab->word();
 		}
-		return array_unique($result);
+		$first->word = $word;
+		
+		return $first;
 	}
 }
