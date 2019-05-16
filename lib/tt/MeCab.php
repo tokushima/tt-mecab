@@ -206,22 +206,20 @@ class MeCab{
 		
 		foreach($mecab_list as $obj){
 			if(
-				!empty($sentence) &&
-				($obj->pos() == 1 || $obj->pos() == 3 || $obj->pos() == 6 || $obj->pos() == 9  || $obj->pos() == 10 || 
+				!empty($sentence) && (
+					in_array($obj->pos(),[1,3,6,9,10,11]) ||
 					($obj->pos() == 13 && ($obj->prop1() == '読点' || $obj->prop1() == '句点'))
 				) &&
 				!preg_match('/^(?:\xE3\x81[\x81-\xBF]|\xE3\x82[\x80-\x93]|ー)$/',$obj->word()) && // ひらがな一文字は無視
-				!($prepos == 9 && ($obj->pos() == 9 || $obj->pos() == 10)) && 
+				!($prepos == 9 && $obj->pos() == 9) && 
 				!($prepos == 10 && $obj->pos() == 10) 
 			){
 				$phrases[] = $sentence;
 				$sentence = [];
 			}
 			
-			if($obj->pos() != 13 || $obj->word() == '・'){
-				$sentence[] = $obj;
-				$prepos = ($obj->word() == '・') ? 9 : $obj->pos();
-			}
+			$sentence[] = $obj;
+			$prepos = ($obj->word() == '・') ? 9 : $obj->pos();
 		}
 		if(!empty($sentence)){
 			$phrases[] = $sentence;
