@@ -196,52 +196,8 @@ class MeCab{
 			}
 		}
 	}
-
-	/**
-	 * フレーズの抽出
-	 * @param string $text
-	 * @return array \tt\MeCab[][]
-	 */
-	public static function phrases($text){
-		$phrases = [];
-		$sentence = [];
-		$prepos = null;
-		
-		foreach(self::morpheme($text) as $obj){
-			if(
-				!empty($sentence) && 
-				(
-					in_array($obj->pos(),[1,3,6,9,10]) ||
-					($obj->pos() == 13 && ($obj->prop1() == '読点' || $obj->prop1() == '句点'))
-				) &&
-				$prepos != $obj->pos()
-			){
-				$phrases[] = $sentence;
-				$sentence = [];
-			}
-			$sentence[] = $obj;
-			$prepos = ($obj->word() == '・') ? 9 : $obj->pos();
-		}
-		if(!empty($sentence)){
-			$phrases[] = $sentence;
-		}
-		return $phrases;
-	}
 	
-	/**
-	 * 結合する
-	 * @param \tt\MeCab[] $mecab_list
-	 * @param \tt\MeCab
-	 */
-	public static function join($mecab_list){
-		list($first) = $mecab_list;
-		$word = '';
-		
-		foreach($mecab_list as $mecab){
-			$word .= $mecab->word();
-		}
-		$first->word = $word;
-		
-		return $first;
+	public function to_json(){
+		return json_encode([(int)$this->pos,(string)$this->word],JSON_UNESCAPED_UNICODE);
 	}
 }
