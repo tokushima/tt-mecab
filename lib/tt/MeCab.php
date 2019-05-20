@@ -29,7 +29,7 @@ class MeCab{
 	protected $prop1;
 	protected $prop2;
 
-	public function __construct($word,$pos,$reading,$prop1,$prop2){
+	public function __construct($word,$pos=9,$reading=null,$prop1=null,$prop2=null){
 		$this->word = $word;
 		$this->pos = $pos;
 		$this->reading = $reading;
@@ -195,9 +195,5 @@ class MeCab{
 				throw new \ebi\exception\BadMethodCallException('mecab not found');
 			}
 		}
-	}
-	
-	public function to_json(){
-		return json_encode([(int)$this->pos,(string)$this->word],JSON_UNESCAPED_UNICODE);
 	}
 }
