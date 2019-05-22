@@ -196,4 +196,54 @@ class MeCab{
 			}
 		}
 	}
+	
+	/**
+	 * 文節の抽出
+	 * @param string $text
+	 * @return array \tt\MeCab[][]
+	 */
+	public static function clause($text){
+		$clause = [];
+		$sentence = [];
+		$prepos = null;
+		
+		foreach(static::morpheme($text) as $obj){
+			if(!empty($sentence) && 
+				(
+					in_array($obj->pos(),[1,3,4,6,9,10]) || 
+					($obj->pos() == 13 && ($obj->prop1() == '読点' || $obj->prop1() == '句点'))
+				) && 
+				!in_array($obj->prop1(),['非自立','接尾']) &&
+				$prepos != $obj->pos()
+			){
+				$clause[] = $sentence;
+				$sentence = [];
+			}
+			if($obj->pos() != 13){
+				$sentence[] = $obj;
+			}
+			$prepos = ($obj->word() == '・') ? 9 : $obj->pos();
+		}
+		if(!empty($sentence)){
+			$clause[] = $sentence;
+		}
+		return $clause;
+	}
+	
+	/**
+	 * 結合する
+	 * @param \tt\MeCab[] $mecab_list
+	 * @param \tt\MeCab
+	 */
+	public static function join($mecab_list){
+		list($first) = $mecab_list;
+		$word = '';
+		
+		foreach($mecab_list as $mecab){
+			$word .= $mecab->word();
+		}
+		$first->word = $word;
+		
+		return $first;
+	}
 }
