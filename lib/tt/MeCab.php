@@ -148,8 +148,11 @@ class MeCab{
 		$text = trim($text);
 		
 		if(!empty($text)){
+			if(strlen($text) > (256 * 1024)){
+				throw new \ebi\exception\InvalidArgumentException('Argument exceeds the allowed length of 262144');
+			}
 			if(!empty($mecab_cmd)){
-				$command = new \ebi\Command('echo "'.escapeshellcmd($text).'" | '.$mecab_cmd.' -p');
+				$command = new \ebi\Command('echo '.escapeshellarg($text).' | '.$mecab_cmd.' -p');
 				
 				foreach(explode(PHP_EOL,$command->stdout()) as $rtn){
 					if($rtn == 'EOS' || empty($rtn)){
