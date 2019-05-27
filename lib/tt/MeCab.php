@@ -51,7 +51,7 @@ class MeCab{
 		return $this->reading;
 	}
 	/**
-	 * 品詞
+	 * 品詞 (part of speech)
 	 * @return integer
 	 */
 	public function pos(){
@@ -219,9 +219,7 @@ class MeCab{
 				$clause[] = $sentence;
 				$sentence = [];
 			}
-			if($obj->pos() != 13){
-				$sentence[] = $obj;
-			}
+			$sentence[] = $obj;
 			$prepos = ($obj->word() == '・') ? 9 : $obj->pos();
 		}
 		if(!empty($sentence)){
@@ -233,14 +231,17 @@ class MeCab{
 	/**
 	 * 結合する
 	 * @param \tt\MeCab[] $mecab_list
+	 * @param integer[] $ignore part of speech to ignore
 	 * @param \tt\MeCab
 	 */
-	public static function join($mecab_list){
+	public static function join($mecab_list,$ignore=[13]){
 		list($first) = $mecab_list;
 		$word = '';
 		
 		foreach($mecab_list as $mecab){
-			$word .= $mecab->word();
+			if(empty($ignore) || !in_array($mecab->pos(), $ignore)){
+				$word .= $mecab->word();
+			}
 		}
 		$first->word = $word;
 		
