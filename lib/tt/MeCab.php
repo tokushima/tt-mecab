@@ -73,7 +73,7 @@ class MeCab{
 	}
 
 	public function pos_label(){
-		return self::get_pos_label($this->pos);
+		return static::get_pos_label($this->pos);
 	}
 	
 	public static function get_pos_label($pos){
@@ -97,7 +97,7 @@ class MeCab{
 	public function __toString(){
 		return $this->word;
 	}
-	private static function feature2pos($fe){
+	protected static function feature2pos($fe){
 		switch($fe){
 			case '形容詞': return 1;
 			case '形容動詞': return 2;
@@ -162,7 +162,7 @@ class MeCab{
 					$fe = explode(',',$feature);
 					
 					if(sizeof($fe) > 2){
-						$pos = self::feature2pos($fe[0]);
+						$pos = static::feature2pos($fe[0]);
 						
 						if(!empty($filter) && !in_array($pos,$filter)){
 							continue;
@@ -180,7 +180,7 @@ class MeCab{
 				foreach((new \MeCab\Tagger())->parseToNode($text) as $node){
 					if($node->getPosId() > 0){
 						$fe = explode(',',$node->getFeature());
-						$pos = self::feature2pos($fe[0]);
+						$pos = static::feature2pos($fe[0]);
 						
 						if(!empty($filter) && !in_array($pos,$filter)){
 							continue;
