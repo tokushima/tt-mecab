@@ -238,16 +238,22 @@ class MeCab{
 	 * @param \tt\MeCab
 	 */
 	public static function join($mecab_list,$ignore=[13]){
-		list($first) = $mecab_list;
 		$word = '';
+		$result = null;
 		
 		foreach($mecab_list as $mecab){
 			if(empty($ignore) || !in_array($mecab->pos(), $ignore)){
-				$word .= $mecab->word();
+				if($result === null){
+					$result = clone($mecab);
+				}else{
+					$word .= $mecab->word();
+				}
 			}
 		}
-		$first->word = $word;
-		
-		return $first;
+		if($result !== null){
+			$result->word .= $word;
+			return $result;
+		}
+		throw new \ebi\exception\InvalidArgumentException();
 	}
 }
