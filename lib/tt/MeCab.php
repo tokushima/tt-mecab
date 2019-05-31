@@ -36,6 +36,11 @@ class MeCab{
 		$this->prop1 = $prop1;
 		$this->prop2 = $prop2;
 	}
+	
+	public function __toString(){
+		return $this->word;
+	}
+	
 	/**
 	 * 単語
 	 * @return string
@@ -72,10 +77,19 @@ class MeCab{
 		return $this->prop2;
 	}
 
+	/**
+	 * 品詞ラベル
+	 * @return string
+	 */
 	public function pos_label(){
 		return static::get_pos_label($this->pos);
 	}
 	
+	/**
+	 * 品詞ラベル
+	 * @param integer $pos
+	 * @return string
+	 */
 	public static function get_pos_label($pos){
 		switch($pos){
 			case 1 : return '形容詞';
@@ -94,9 +108,12 @@ class MeCab{
 		}
 		return null;
 	}
-	public function __toString(){
-		return $this->word;
-	}
+	
+	/**
+	 * 品詞名から品詞IDを返す
+	 * @param string $fe
+	 * @return number
+	 */
 	protected static function feature2pos($fe){
 		switch($fe){
 			case '形容詞': return 1;
@@ -148,82 +165,79 @@ class MeCab{
 		$text = trim($text);
 		
 		if(!empty($text)){
+			if(empty($mecab_cmd)){
+				throw new \ebi\exception\BadMethodCallException('Undefined mecab command');
+			}
 			if(strlen($text) > (256 * 1024)){
 				throw new \ebi\exception\InvalidArgumentException('Argument exceeds the allowed length of 262144');
 			}
-			if(!empty($mecab_cmd)){
-				$command = new \ebi\Command('echo '.escapeshellarg($text).' | '.$mecab_cmd.' -p');
+			$command = new \ebi\Command('echo '.escapeshellarg($text).' | '.$mecab_cmd.' -p');
+			
+			foreach(explode(PHP_EOL,$command->stdout()) as $rtn){
+				if($rtn == 'EOS' || empty($rtn)){
+					break;
+				}
+				list($surface,$feature) = explode("\t",$rtn);
+				$fe = explode(',',$feature);
 				
-				foreach(explode(PHP_EOL,$command->stdout()) as $rtn){
-					if($rtn == 'EOS' || empty($rtn)){
-						break;
-					}
-					list($surface,$feature) = explode("\t",$rtn);
-					$fe = explode(',',$feature);
+				if(sizeof($fe) > 2){
+					$pos = static::feature2pos($fe[0]);
 					
-					if(sizeof($fe) > 2){
-						$pos = static::feature2pos($fe[0]);
-						
-						if(!empty($filter) && !in_array($pos,$filter)){
-							continue;
-						}
-						yield new static(
-							$surface,
-							$pos,
-							($fe[8] ?? $surface),
-							$fe[1],
-							(($fe[2] == '*') ? '' :  $fe[2])
-						);
+					if(!empty($filter) && !in_array($pos,$filter)){
+						continue;
 					}
+					yield new static(
+						$surface,
+						$pos,
+						($fe[8] ?? $surface),
+						$fe[1],
+						(($fe[2] == '*') ? '' :  $fe[2])
+					);
 				}
-			}else if(class_exists('\MeCab\Tagger')){
-				foreach((new \MeCab\Tagger())->parseToNode($text) as $node){
-					if($node->getPosId() > 0){
-						$fe = explode(',',$node->getFeature());
-						$pos = static::feature2pos($fe[0]);
-						
-						if(!empty($filter) && !in_array($pos,$filter)){
-							continue;
-						}
-						yield new static(
-							$node->getSurface(),
-							$pos,
-							($fe[8] ?? $node->getSurface()),
-							$fe[1],
-							(($fe[2] == '*') ? '' :  $fe[2])
-						);
-					}
-				}
-			}else{
-				throw new \ebi\exception\BadMethodCallException('mecab not found');
 			}
 		}
 	}
 	
 	/**
 	 * 文節の抽出
-	 * @param string $text
+	 * @param \tt\MeCab[] $mecab_list
 	 * @return array \tt\MeCab[][]
 	 */
-	public static function clause($text){
+	public static function clause($mecab_list){
 		$clause = [];
 		$sentence = [];
 		$prepos = null;
+		$issub = false;
 		
-		foreach(static::morpheme($text) as $obj){
+		if(is_string($mecab_list)){
+			$mecab_list = static::morpheme($mecab_list);
+		}
+		foreach($mecab_list as $obj){
+			$cpos = $obj->pos();
+			
+			if($cpos == 13){
+				if(!$issub && $obj->prop1() == '括弧開'){
+					$issub = true;
+				}else if($issub && $obj->prop1() == '括弧閉'){
+					$issub = false;
+				}
+			}
+			if($issub){
+				$cpos = 9;
+			}
 			if(!empty($sentence) && 
 				(
-					in_array($obj->pos(),[1,3,4,6,9,10]) || 
-					($obj->pos() == 13 && ($obj->prop1() == '読点' || $obj->prop1() == '句点'))
+					in_array($cpos,[1,3,4,6,9,10]) || 
+					($cpos == 13 && ($obj->prop1() == '読点' || $obj->prop1() == '句点'))
 				) && 
 				!in_array($obj->prop1(),['非自立','接尾']) &&
-				$prepos != $obj->pos()
+				$prepos != $cpos
 			){
 				$clause[] = $sentence;
 				$sentence = [];
 			}
 			$sentence[] = $obj;
-			$prepos = ($obj->word() == '・') ? 9 : $obj->pos();
+			$prepos = ($obj->word() == '・') ? 9 : $cpos;
 		}
 		if(!empty($sentence)){
 			$clause[] = $sentence;
@@ -255,5 +269,20 @@ class MeCab{
 			return $result;
 		}
 		throw new \ebi\exception\InvalidArgumentException();
+	}
+	
+	/**
+	 * 名詞としてマーキングする
+	 * @param string $text
+	 * @param array $nouns
+	 * @return string
+	 */
+	public static function making($text,array $nouns){
+		foreach($nouns as $noun){
+			if(strpos($text,$noun) !== false){
+				$text = str_replace($noun,'『'.$noun.'』', $text);
+			}
+		}
+		return $text;
 	}
 }
