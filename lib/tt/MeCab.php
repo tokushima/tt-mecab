@@ -6,19 +6,19 @@ namespace tt;
  * インストール:
  *  > brew install mecab
  *  > brew install mecab-ipadic
- *  
+ *
  * Neologism dictionary for MeCab
  *  (mecab-ipadic-NEologd は、多数のWeb上の言語資源から得た新語を追加することでカスタマイズした MeCab 用のシステム辞書です。)
  *  https://github.com/neologd/mecab-ipadic-neologd/blob/master/README.ja.md
  *
  * 辞書を設定
  *  > vim /usr/local/etc/mecabrc
- *  
- * 辞書DIRの変更: 
+ *
+ * 辞書DIRの変更:
  *  dicdir = /usr/local/lib/mecab/dic/mecab-ipadic-neologd
- * ユーザ辞書追加(カンマ区切りで複数指定可能): 
+ * ユーザ辞書追加(カンマ区切りで複数指定可能):
  *  userdic = /usr/local/lib/mecab/dic/ipadic/wikipedia.dic
- * 
+ *
  * @author tokushima
  * @see https://github.com/rsky/php-mecab
  */
@@ -28,7 +28,7 @@ class MeCab{
 	protected $reading;
 	protected $prop1;
 	protected $prop2;
-
+	
 	public function __construct($word,$pos=9,$reading=null,$prop1=null,$prop2=null){
 		$this->word = $word;
 		$this->pos = $pos;
@@ -76,7 +76,7 @@ class MeCab{
 	public function prop2(){
 		return $this->prop2;
 	}
-
+	
 	/**
 	 * 品詞ラベル
 	 * @return string
@@ -157,7 +157,7 @@ class MeCab{
 	public static function morpheme($text,$filter=[]){
 		/**
 		 * mecabコマンドパス
-		 * /usr/local/bin/mecab 
+		 * /usr/local/bin/mecab
 		 * /usr/local/bin/mecab -u /etc/opt/user.dic
 		 * @var string $cmd
 		 */
@@ -187,12 +187,12 @@ class MeCab{
 						continue;
 					}
 					yield new static(
-						$surface,
-						$pos,
-						($fe[8] ?? $surface),
-						$fe[1],
-						(($fe[2] == '*') ? '' :  $fe[2])
-					);
+							$surface,
+							$pos,
+							($fe[8] ?? $surface),
+							$fe[1],
+							(($fe[2] == '*') ? '' :  $fe[2])
+							);
 				}
 			}
 		}
@@ -225,11 +225,11 @@ class MeCab{
 			if($issub){
 				$cpos = 9;
 			}
-			if(!empty($sentence) && 
+			if(!empty($sentence) &&
 				(
-					in_array($cpos,[1,3,4,6,9,10]) || 
+					in_array($cpos,[1,3,4,6,9,10]) ||
 					($cpos == 13 && ($obj->prop1() == '読点' || $obj->prop1() == '句点'))
-				) && 
+				) &&
 				!in_array($obj->prop1(),['非自立','接尾']) &&
 				$prepos != $cpos
 			){
