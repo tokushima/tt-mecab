@@ -187,12 +187,12 @@ class MeCab{
 						continue;
 					}
 					yield new static(
-							$surface,
-							$pos,
-							($fe[8] ?? $surface),
-							$fe[1],
-							(($fe[2] == '*') ? '' :  $fe[2])
-							);
+						$surface,
+						$pos,
+						($fe[8] ?? $surface),
+						$fe[1],
+						(($fe[2] == '*') ? '' :  $fe[2])
+					);
 				}
 			}
 		}
@@ -207,7 +207,7 @@ class MeCab{
 		$clause = [];
 		$sentence = [];
 		$prepos = null;
-		$issub = false;
+		$issub = null;
 		
 		if(is_string($mecab_list)){
 			$mecab_list = static::morpheme($mecab_list);
@@ -215,15 +215,20 @@ class MeCab{
 		foreach($mecab_list as $obj){
 			$cpos = $obj->pos();
 			
-			if($cpos == 13){
-				if(!$issub && $obj->prop1() == '括弧開'){
-					$issub = true;
-				}else if($issub && $obj->prop1() == '括弧閉'){
-					$issub = false;
+			if($obj->pos() == 13){
+				if(!isset($issub)){
+					if($obj->word() == '{&'){
+						$issub = 9;
+					}else if($obj->word() == '{%'){
+						$issub = 10;
+					}
+				}else if(isset($issub) && ($obj->word() == '%}' || $obj->word() == '&}')){
+					$issub = null;
 				}
 			}
-			if($issub){
-				$cpos = 9;
+			if(isset($issub) && $obj->pos() != 13){
+				$obj->pos = $issub;
+				$cpos = $issub;
 			}
 			if(!empty($sentence) &&
 				(
@@ -275,12 +280,15 @@ class MeCab{
 	 * 名詞としてマーキングする
 	 * @param string $text
 	 * @param array $nouns
+	 * @param integer $pos
 	 * @return string
 	 */
-	public static function making($text,array $nouns){
+	public static function making($text,array $nouns,$pos=9){
+		$mark = ($pos == 9) ? '&' : '%';
+		
 		foreach($nouns as $noun){
 			if(strpos($text,$noun) !== false){
-				$text = str_replace($noun,'『'.$noun.'』', $text);
+				$text = str_replace($noun,'{'.$mark.$noun.$mark.'}', $text);
 			}
 		}
 		return $text;
