@@ -172,42 +172,45 @@ class MeCab{
 				throw new \ebi\exception\InvalidArgumentException('Argument exceeds the allowed length of 262144');
 			}
 			$command = new \ebi\Command('echo '.escapeshellarg($text).' | '.$mecab_cmd.' -p');
+			return self::stdout2obj($command->stdout(),$filter);
+		}
+		return [];
+	}
+	protected static function stdout2obj($mecab_stdout,$filter){
+		$make = null;
+		foreach(explode(PHP_EOL,$mecab_stdout) as $rtn){
+			if($rtn == 'EOS' || empty($rtn)){
+				break;
+			}
+			list($surface,$feature) = explode("\t",$rtn);
+			$fe = explode(',',$feature);
 			
-			$make = null;
-			foreach(explode(PHP_EOL,$command->stdout()) as $rtn){
-				if($rtn == 'EOS' || empty($rtn)){
-					break;
-				}
-				list($surface,$feature) = explode("\t",$rtn);
-				$fe = explode(',',$feature);
+			if(sizeof($fe) > 2){
+				$pos = static::feature2pos($fe[0]);
 				
-				if(sizeof($fe) > 2){
-					$pos = static::feature2pos($fe[0]);
-					
-					if(!empty($filter) && !in_array($pos,$filter)){
-						continue;
-					}
-					if($pos == 13){
-						if(!isset($make) && ($surface == '{*' || $surface == '{%')){
-							$make = ($surface[1] == '*') ? [9,'','一般'] : [10,'','自立'];
-							continue;
-						}else if(isset($make) && ($surface == '*}' || $surface == '%}')){
-							list($pos,$surface) = $make;
-							$fe[8] = $fe[2] = null;
-							$fe[1] = $make[2];
-							$make = null;
-						}
-					}
-					if(isset($make)){
-						$make[1] .= $surface;
-						continue;
-					}
-					yield new static($surface,$pos,($fe[8] ?? $surface),$fe[1],(($fe[2] == '*') ? '' :  $fe[2]));
+				if(!empty($filter) && !in_array($pos,$filter)){
+					continue;
 				}
+				if($pos == 13){
+					if(!isset($make) && ($surface == '{*' || $surface == '{%')){
+						$make = ($surface[1] == '*') ? [9,'','一般'] : [10,'','自立'];
+						continue;
+					}else if(isset($make) && ($surface == '*}' || $surface == '%}')){
+						list($pos,$surface) = $make;
+						$fe[8] = $fe[2] = null;
+						$fe[1] = $make[2];
+						$make = null;
+					}
+				}
+				if(isset($make)){
+					$make[1] .= $surface;
+					continue;
+				}
+				yield new static($surface,$pos,($fe[8] ?? $surface),$fe[1],(($fe[2] == '*') ? '' :  $fe[2]));
 			}
-			if(isset($make)){
-				yield new static($make[1],$make[0],$make[1],$make[2],'');
-			}
+		}
+		if(isset($make)){
+			yield new static($make[1],$make[0],$make[1],$make[2],'');
 		}
 	}
 	
