@@ -173,6 +173,7 @@ class MeCab{
 			}
 			$command = new \ebi\Command('echo '.escapeshellarg($text).' | '.$mecab_cmd.' -p');
 			
+			$make = null;
 			foreach(explode(PHP_EOL,$command->stdout()) as $rtn){
 				if($rtn == 'EOS' || empty($rtn)){
 					break;
@@ -186,14 +187,26 @@ class MeCab{
 					if(!empty($filter) && !in_array($pos,$filter)){
 						continue;
 					}
-					yield new static(
-						$surface,
-						$pos,
-						($fe[8] ?? $surface),
-						$fe[1],
-						(($fe[2] == '*') ? '' :  $fe[2])
-					);
+					if($pos == 13){
+						if(!isset($make) && ($surface == '{*' || $surface == '{%')){
+							$make = ($surface[1] == '*') ? [9,'','一般'] : [10,'','自立'];
+							continue;
+						}else if(isset($make) && ($surface == '*}' || $surface == '%}')){
+							list($pos,$surface) = $make;
+							$fe[8] = $fe[2] = null;
+							$fe[1] = $make[2];
+							$make = null;
+						}
+					}
+					if(isset($make)){
+						$make[1] .= $surface;
+						continue;
+					}
+					yield new static($surface,$pos,($fe[8] ?? $surface),$fe[1],(($fe[2] == '*') ? '' :  $fe[2]));
 				}
+			}
+			if(isset($make)){
+				yield new static($make[1],$make[0],$make[1],$make[2],'');
 			}
 		}
 	}
@@ -207,7 +220,6 @@ class MeCab{
 		$clause = [];
 		$sentence = [];
 		$prepos = null;
-		$issub = null;
 		
 		if(is_string($mecab_list)){
 			$mecab_list = static::morpheme($mecab_list);
@@ -215,21 +227,6 @@ class MeCab{
 		foreach($mecab_list as $obj){
 			$cpos = $obj->pos();
 			
-			if($obj->pos() == 13){
-				if(!isset($issub)){
-					if($obj->word() == '{&'){
-						$issub = 9;
-					}else if($obj->word() == '{%'){
-						$issub = 10;
-					}
-				}else if(isset($issub) && ($obj->word() == '%}' || $obj->word() == '&}')){
-					$issub = null;
-				}
-			}
-			if(isset($issub) && $obj->pos() != 13){
-				$obj->pos = $issub;
-				$cpos = $issub;
-			}
 			if(!empty($sentence) &&
 				(
 					in_array($cpos,[1,3,4,6,9,10]) ||
@@ -284,11 +281,11 @@ class MeCab{
 	 * @return string
 	 */
 	public static function making($text,array $nouns,$pos=9){
-		$mark = ($pos == 9) ? '&' : '%';
+		$mark = ($pos == 9) ? '*' : '%';
 		
 		foreach($nouns as $noun){
 			if(strpos($text,$noun) !== false){
-				$text = str_replace($noun,'{'.$mark.$noun.$mark.'}', $text);
+				$text = str_replace($noun,' {'.$mark.$noun.$mark.'} ', $text);
 			}
 		}
 		return $text;
