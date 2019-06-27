@@ -191,16 +191,14 @@ class MeCab{
 				if(!empty($filter) && !in_array($pos,$filter)){
 					continue;
 				}
-				if($pos == 13){
-					if(!isset($make) && ($surface == '{*' || $surface == '{%')){
-						$make = ($surface[1] == '*') ? [9,'','一般'] : [10,'','自立'];
-						continue;
-					}else if(isset($make) && ($surface == '*}' || $surface == '%}')){
-						list($pos,$surface) = $make;
-						$fe[8] = $fe[2] = null;
-						$fe[1] = $make[2];
-						$make = null;
-					}
+				if(!isset($make) && ($surface == '{*' || $surface == '{%')){
+					$make = ($surface[1] == '*') ? [9,'','一般'] : [10,'','自立'];
+					continue;
+				}else if(isset($make) && ($surface == '*}' || $surface == '%}')){
+					list($pos,$surface) = $make;
+					$fe[8] = $fe[2] = null;
+					$fe[1] = $make[2];
+					$make = null;
 				}
 				if(isset($make)){
 					$make[1] .= $surface;
